@@ -1,0 +1,161 @@
+# config/default.yaml
+
+# VintageOptics v2.0 Configuration
+
+app:
+  name: VintageOptics
+  version: 2.0.0
+  environment: production
+
+# Processing settings
+processing:
+  # Modes
+  default_mode: correct  # correct, synthesize, hybrid
+  preserve_character: true
+  use_gpu: auto  # auto, true, false
+  
+  # Quality settings
+  quality_preset: high  # low, medium, high, ultra
+  output_format: tiff
+  color_space: srgb
+  bit_depth: 16
+
+# Physics engine
+physics:
+  # Correction strengths (0-1)
+  distortion_correction: 0.9
+  chromatic_correction: 0.95
+  vignetting_correction: 0.7
+  
+  # Advanced corrections
+  field_curvature: true
+  spherical_aberration: true
+  diffraction_compensation: auto
+  
+  # Character preservation
+  preserve_swirly_bokeh: true
+  preserve_soap_bubbles: true
+  preserve_vintage_contrast: true
+
+# Depth processing
+depth:
+  enabled: true
+  estimation_model: midas_dpt_large
+  
+  # Layer processing
+  auto_layers: true
+  min_layers: 3
+  max_layers: 7
+  
+  # Differential processing
+  sharp_area_strength: 1.0
+  transition_strength: 0.7
+  bokeh_area_strength: 0.3
+
+# Synthesis settings
+synthesis:
+  # Bokeh synthesis
+  bokeh_quality: high
+  aperture_simulation: accurate
+  
+  # Character transfer
+  transfer_contrast: true
+  transfer_color: true
+  transfer_aberrations: true
+  
+  # FOV transformation
+  max_fov_expansion: 1.5
+  inpainting_method: neural  # classical, neural
+
+# Statistical cleanup
+cleanup:
+  # Detection sensitivity
+  dust_sensitivity: 0.8
+  scratch_sensitivity: 0.7
+  fungus_sensitivity: 0.6
+  
+  # Preservation
+  preserve_bokeh_artifacts: true
+  adaptive_strength: true
+
+# External integrations
+integrations:
+  # Metadata extraction
+  exiftool:
+    enabled: true
+    path: /usr/local/bin/exiftool
+  
+  # Lens database
+  lensfun:
+    enabled: true
+    auto_import: true
+  
+  # Depth estimation
+  midas:
+    model_path: ./data/models/midas
+    model_type: DPT_Large
+  
+  # Advanced calibration
+  hugin:
+    enabled: false
+    tools_path: /usr/local/bin
+
+# Performance
+performance:
+  # Threading
+  num_threads: auto
+  batch_size: 4
+  
+  # Memory
+  max_memory_gb: 8
+  use_memory_pool: true
+  
+  # Caching
+  cache_enabled: true
+  cache_size_gb: 2
+  cache_ttl_days: 30
+
+# Database
+database:
+  type: sqlite
+  path: ./data/databases/vintageoptics.db
+  
+  # Connection pool
+  pool_size: 5
+  timeout: 30
+
+# Logging
+logging:
+  level: INFO
+  file: ./logs/vintageoptics.log
+  max_size_mb: 100
+  backup_count: 5
+  
+  # Component-specific levels
+  components:
+    physics: INFO
+    detection: DEBUG
+    synthesis: INFO
+
+# API settings
+api:
+  enabled: true
+  host: 0.0.0.0
+  port: 8000
+  
+  # Rate limiting
+  rate_limit: 100
+  rate_window: 3600
+  
+  # Authentication
+  auth_enabled: false
+  api_key_header: X-API-Key
+
+# Development
+development:
+  debug: false
+  profiling: false
+  
+  # Test data
+  test_images: ./tests/fixtures/images
+  test_database: ./tests/fixtures/test.db
