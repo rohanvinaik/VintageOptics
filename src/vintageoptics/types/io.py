@@ -29,3 +29,13 @@ class ProcessingResult:
         self.metadata = {}
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+@dataclass
+class BatchResult:
+    """Container for batch processing results"""
+    results: list
+    report: Dict
+    
+    def __init__(self, results, report):
+        self.results = results
+        self.report = report

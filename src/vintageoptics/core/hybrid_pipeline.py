@@ -39,8 +39,10 @@ class HybridPhysicsMLPipeline:
     
     def __init__(self, config: Dict):
         self.config = config
-        self.max_iterations = config.get('hybrid', {}).get('max_iterations', 3)
+        self.max_iterations = config.get('hybrid', {}).get('max_iterations', 5)
+        self.min_iterations = config.get('hybrid', {}).get('min_iterations', 2)
         self.convergence_threshold = config.get('hybrid', {}).get('convergence_threshold', 0.01)
+        self.early_stop_patience = config.get('hybrid', {}).get('early_stop_patience', 2)
         
         # Initialize components
         self.vintage_ml = VintageMLDefectDetector(config)
@@ -69,16 +71,21 @@ class HybridPhysicsMLPipeline:
                 physics_params = self._estimate_initial_physics_params(working_image, metadata)
                 physics_corrected = self._apply_physics_correction(working_image, physics_params)
             
-            # 3. Iterative refinement loop
+            # 3. Iterative refinement loop with convergence tracking
             best_result = physics_corrected.copy()
             best_params = physics_params.copy()
             best_error = float('inf')
+            previous_errors = []
+            no_improvement_count = 0
             
             defect_masks = {}
             ml_confidence = 0.0
+            converged = False
+            actual_iterations = 0
             
             for iteration in range(self.max_iterations):
                 logger.info(f"Hybrid iteration {iteration + 1}/{self.max_iterations}")
+                actual_iterations = iteration + 1
                 
                 # 3a. Vintage ML residual analysis
                 with self.performance_monitor.track(f"ml_analysis_{iteration}"):
@@ -111,22 +118,55 @@ class HybridPhysicsMLPipeline:
                     
                     # Calculate iteration error
                     error = self._calculate_error(working_image, ml_cleaned)
+                    previous_errors.append(error)
+                    
+                    # Track improvements
+                    improvement = best_error - error
                     
                     if error < best_error:
                         best_result = ml_cleaned.copy()
                         best_params = physics_params.copy()
                         best_error = error
+                        no_improvement_count = 0
                         
                         # Update defect masks
                         for i, result in enumerate(ml_results):
                             defect_masks[f"{result.defect_type}_{i}"] = result.defect_mask
                         
                         ml_confidence = np.mean([r.confidence for r in ml_results]) if ml_results else 0.0
+                    else:
+                        no_improvement_count += 1
                     
-                    # Check convergence
-                    if iteration > 0 and abs(error - best_error) < self.convergence_threshold:
-                        logger.info(f"Converged at iteration {iteration + 1}")
-                        break
+                    # Convergence checks
+                    if iteration >= self.min_iterations - 1:
+                        # Check absolute convergence
+                        if abs(improvement) < self.convergence_threshold:
+                            logger.info(f"Converged at iteration {iteration + 1} (improvement < {self.convergence_threshold})")
+                            converged = True
+                            break
+                        
+                        # Check relative convergence (for very small errors)
+                        if best_error > 0 and abs(improvement / best_error) < 0.01:
+                            logger.info(f"Converged at iteration {iteration + 1} (relative improvement < 1%)")
+                            converged = True
+                            break
+                        
+                        # Check early stopping patience
+                        if no_improvement_count >= self.early_stop_patience:
+                            logger.info(f"Early stopping at iteration {iteration + 1} (no improvement for {self.early_stop_patience} iterations)")
+                            break
+                        
+                        # Check error oscillation
+                        if len(previous_errors) >= 3:
+                            recent_errors = previous_errors[-3:]
+                            error_std = np.std(recent_errors)
+                            if error_std < self.convergence_threshold * 0.1:
+                                logger.info(f"Converged at iteration {iteration + 1} (error stabilized)")
+                                converged = True
+                                break
+            
+            if not converged and actual_iterations >= self.max_iterations:
+                logger.warning(f"Maximum iterations ({self.max_iterations}) reached without convergence")
             
             # 4. Optional modern ML fallback
             if self.config.get('hybrid', {}).get('use_modern_fallback', False) and best_error > 0.1:
@@ -141,7 +181,7 @@ class HybridPhysicsMLPipeline:
                 defect_masks=defect_masks,
                 physics_params=best_params,
                 ml_confidence=ml_confidence,
-                iterations=iteration + 1,
+                iterations=actual_iterations,
                 residual_error=best_error,
                 performance_metrics=self.performance_monitor.get_summary(),
                 metadata=metadata

@@ -345,25 +345,132 @@ class VintageMLDefectDetector:
     
     def _combine_results(self, results: List[VintageDefectResult]) -> List[VintageDefectResult]:
         """
-        Combine results from different methods
-        Simple voting or consensus approach
+        Combine results from different methods using consensus mechanism
+        Implements voting-based consensus with confidence weighting
         """
         if not results:
             return []
         
-        # Group by method
-        by_method = {}
+        # Get image dimensions from first result
+        h, w = results[0].defect_mask.shape
+        
+        # Group by defect type
+        by_type = {}
         for result in results:
-            method = result.method_used
-            if method not in by_method:
-                by_method[method] = []
-            by_method[method].append(result)
+            defect_type = result.defect_type
+            if defect_type not in by_type:
+                by_type[defect_type] = []
+            by_type[defect_type].append(result)
         
-        # If multiple methods agree on a region, increase confidence
-        # For now, just return all results
-        # TODO: Implement proper consensus mechanism
+        # Consensus results
+        consensus_results = []
         
-        return results
+        for defect_type, type_results in by_type.items():
+            if len(type_results) == 1:
+                # Single detection, use as-is but reduce confidence
+                result = type_results[0]
+                result.confidence *= 0.7  # Single-method penalty
+                consensus_results.append(result)
+            else:
+                # Multiple detections - compute weighted consensus
+                consensus_mask = np.zeros((h, w), dtype=np.float32)
+                total_confidence = 0.0
+                methods_used = set()
+                
+                # Accumulate weighted masks
+                for result in type_results:
+                    # Weight by confidence and method reliability
+                    method_weight = self._get_method_weight(result.method_used)
+                    weight = result.confidence * method_weight
+                    
+                    # Normalize mask to [0, 1] and accumulate
+                    normalized_mask = result.defect_mask.astype(np.float32) / 255.0
+                    consensus_mask += normalized_mask * weight
+                    total_confidence += weight
+                    methods_used.add(result.method_used)
+                
+                # Normalize consensus mask
+                if total_confidence > 0:
+                    consensus_mask /= total_confidence
+                
+                # Apply adaptive threshold based on number of agreeing methods
+                agreement_ratio = len(type_results) / len(results)
+                threshold = max(0.3, 0.5 - 0.1 * len(methods_used))  # Lower threshold with more agreement
+                
+                # Binarize consensus mask
+                final_mask = (consensus_mask > threshold).astype(np.uint8) * 255
+                
+                # Apply morphological operations to clean up
+                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+                final_mask = cv2.morphologyEx(final_mask, cv2.MORPH_CLOSE, kernel)
+                final_mask = cv2.morphologyEx(final_mask, cv2.MORPH_OPEN, kernel)
+                
+                if np.any(final_mask):
+                    # Calculate consensus confidence
+                    consensus_confidence = min(0.95, total_confidence / len(type_results) * agreement_ratio)
+                    
+                    consensus_results.append(VintageDefectResult(
+                        defect_mask=final_mask,
+                        defect_type=defect_type,
+                        confidence=consensus_confidence,
+                        method_used=f"consensus_{len(methods_used)}_methods"
+                    ))
+        
+        # Post-process: merge overlapping detections of same type
+        final_results = self._merge_overlapping_detections(consensus_results)
+        
+        return final_results
+    
+    def _get_method_weight(self, method: str) -> float:
+        """
+        Get reliability weight for each detection method
+        Based on empirical performance
+        """
+        weights = {
+            'perceptron': 0.8,      # Simple but reliable for binary detection
+            'som': 0.7,             # Good for anomaly detection
+            'knn': 0.9,             # Usually most accurate
+            'statistical_outlier': 0.5,  # Basic fallback method
+        }
+        return weights.get(method, 0.6)
+    
+    def _merge_overlapping_detections(self, results: List[VintageDefectResult]) -> List[VintageDefectResult]:
+        """
+        Merge overlapping detections of the same type
+        """
+        if len(results) <= 1:
+            return results
+        
+        # Group by defect type
+        by_type = {}
+        for result in results:
+            if result.defect_type not in by_type:
+                by_type[result.defect_type] = []
+            by_type[result.defect_type].append(result)
+        
+        merged_results = []
+        
+        for defect_type, type_results in by_type.items():
+            if len(type_results) == 1:
+                merged_results.append(type_results[0])
+            else:
+                # Merge overlapping masks
+                h, w = type_results[0].defect_mask.shape
+                merged_mask = np.zeros((h, w), dtype=np.uint8)
+                max_confidence = 0.0
+                
+                for result in type_results:
+                    merged_mask = cv2.bitwise_or(merged_mask, result.defect_mask)
+                    max_confidence = max(max_confidence, result.confidence)
+                
+                merged_results.append(VintageDefectResult(
+                    defect_mask=merged_mask,
+                    defect_type=defect_type,
+                    confidence=max_confidence,
+                    method_used="merged_consensus"
+                ))
+        
+        return merged_results
     
     def train(self, training_data: List[Tuple[np.ndarray, np.ndarray]]):
         """
