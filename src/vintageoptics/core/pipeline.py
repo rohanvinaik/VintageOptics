@@ -16,7 +16,7 @@ from ..analysis import QualityAnalyzer
 from .config_manager import ConfigManager
 from .performance_monitor import PerformanceMonitor
 from .hybrid_pipeline import HybridPhysicsMLPipeline
-from . import ImageData, ProcessingResult, BatchResult
+from ..types.io import ImageData, ProcessingResult, BatchResult
 
 
 class ProcessingMode(Enum):
@@ -248,8 +248,19 @@ class VintageOpticsPipeline:
     
     def _setup_plugins(self):
         """Setup plugin system"""
-        # Plugin system will be implemented to allow custom processing modules
-        pass
+        # Initialize plugin registry
+        self.plugins = {
+            'pre_processors': [],
+            'post_processors': [],
+            'detectors': [],
+            'correctors': []
+        }
+        
+        # Load built-in plugins
+        from .plugin_system import PluginLoader
+        if hasattr(self, 'config') and self.config.get('plugins', {}).get('enabled', False):
+            plugin_loader = PluginLoader(self.config.get('plugins', {}).get('directory', 'plugins'))
+            self.plugins = plugin_loader.load_all()
     
     def _load_and_analyze(self, image_path: str) -> ImageData:
         """Load and analyze image"""
@@ -502,8 +513,16 @@ class VintageOpticsPipeline:
     
     def _cache_lens_profile(self, lens_group: str):
         """Cache lens profile for batch processing"""
-        # This would load and cache the profile
-        pass
+        # Check if already cached
+        if not hasattr(self, '_lens_cache'):
+            self._lens_cache = {}
+            
+        if lens_group not in self._lens_cache:
+            # Load from database or generate
+            profile = self._load_lens_profile(lens_group)
+            self._lens_cache[lens_group] = profile
+            
+        return self._lens_cache[lens_group]
     
     def _parallel_process(self, images: List[str], mode: ProcessingMode, **kwargs) -> List:
         """Process images in parallel using multiprocessing"""
