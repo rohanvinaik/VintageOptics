@@ -31,6 +31,13 @@ VintageOptics is an open-source lens correction system that goes beyond simple g
 - **Depth-Aware Processing**: Corrections that adapt based on depth information
 - **Physics-Based**: Deterministic corrections based on optical principles
 
+### 🧠 Vintage ML Integration
+- **AI-Winter First**: Classic ML algorithms (1950s-1980s) as primary detection layer
+- **Transparent Detection**: Perceptron, ADALINE, k-NN, SOM for interpretable results
+- **Hybrid Physics-ML**: Iterative refinement between physics and vintage ML
+- **PAC Learning**: Entropy-based adaptation and rule extraction
+- **Lightweight**: CPU-only processing, no GPU required
+
 ## Installation
 
 ### Prerequisites
@@ -87,7 +94,7 @@ from vintageoptics.core import ProcessingRequest, ProcessingMode
 # Initialize pipeline
 pipeline = VintageOpticsPipeline('config/default.yaml')
 
-# Process an image
+# Process an image with standard correction
 request = ProcessingRequest(
     image_path='path/to/image.jpg',
     mode=ProcessingMode.CORRECT,
@@ -98,6 +105,39 @@ request = ProcessingRequest(
 result = pipeline.process(request)
 print(f"Lens detected: {result.lens_profile}")
 print(f"Corrections applied: {result.quality_metrics}")
+
+# Or use the hybrid physics-ML approach
+request.mode = ProcessingMode.HYBRID
+result = pipeline.process(request)
+print(f"Converged in {result.iterations} iterations")
+print(f"ML confidence: {result.ml_confidence:.2f}")
+```
+
+### Vintage ML Detection
+
+Use classic machine learning for transparent defect detection:
+
+```python
+from vintageoptics.vintageml import VintageMLDefectDetector
+
+detector = VintageMLDefectDetector(config)
+results = detector.detect_defects(image)
+
+for result in results:
+    print(f"Detected {result.defect_type} using {result.method_used}")
+    print(f"Confidence: {result.confidence:.2f}")
+```
+
+Train on your own data:
+
+```python
+from vintageoptics.vintageml import VintageMLTrainer
+
+trainer = VintageMLTrainer(config)
+trainer.train(
+    data_dir='path/to/training/data',
+    save_path='models/my_vintage_ml.pkl'
+)
 ```
 
 ## Advanced Usage
@@ -177,7 +217,9 @@ VintageOptics/
 │   ├── physics/            # Optical correction engine
 │   ├── statistical/        # Defect detection and cleanup
 │   ├── synthesis/          # Character synthesis and preservation
+│   ├── vintageml/          # Vintage ML algorithms (1950s-1980s)
 │   ├── calibration/        # Lens calibration methods
+│   ├── core/               # Pipeline and hybrid processing
 │   └── integrations/       # External library integrations
 ├── config/                 # Configuration files
 ├── data/                   # Data storage
@@ -205,6 +247,16 @@ Unlike clinical correction software that aims for mathematical perfection, Vinta
 - Maintains lens-specific rendering styles
 - Adapts corrections based on image content
 - Allows fine control over character preservation
+
+### Vintage ML Approach
+
+Our "AI-winter first" philosophy extends to defect detection. By using classic algorithms from the 1950s-1980s as the primary layer:
+- **Transparency**: Every decision is interpretable - you can inspect perceptron weights and decision boundaries
+- **Education**: Learn ML history through working implementations of foundational algorithms
+- **Efficiency**: Runs on CPU without GPU requirements, suitable for real-time processing
+- **Effectiveness**: These simple algorithms often suffice for detecting dust, scratches, and other defects
+
+The system uses modern ML only as a fallback for complex cases, maintaining our commitment to explainable, character-preserving processing.
 
 ## License
 

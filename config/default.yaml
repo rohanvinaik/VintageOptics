@@ -1,161 +1,199 @@
-# config/default.yaml
+# VintageOptics Configuration
+# Character-preserving lens correction with vintage ML
 
-# VintageOptics v2.0 Configuration
+# Pipeline configuration
+pipeline:
+  default_mode: hybrid  # correct, synthesize, or hybrid
+  parallel_processing: true
+  max_workers: 4
+  cache_enabled: true
+  cache_size_mb: 500
 
-app:
-  name: VintageOptics
-  version: 2.0.0
-  environment: production
-
-# Processing settings
-processing:
-  # Modes
-  default_mode: correct  # correct, synthesize, hybrid
-  preserve_character: true
-  use_gpu: auto  # auto, true, false
+# Vintage ML configuration
+vintageml:
+  # Perceptron settings
+  perceptron:
+    learning_rate: 0.01
+    max_epochs: 100
+    
+  # PCA settings
+  pca_components: 20
   
-  # Quality settings
-  quality_preset: high  # low, medium, high, ultra
-  output_format: tiff
-  color_space: srgb
-  bit_depth: 16
+  # LDA settings
+  lda_components: 3
+  
+  # k-NN settings
+  k_neighbors: 5
+  distance_metric: euclidean
+  
+  # SOM settings
+  som_size: [15, 15]
+  som_learning_rate: 0.5
+  som_iterations: 1000
+  
+  # Detection thresholds
+  confidence_threshold: 0.5
+  patch_size: 32
+  stride: 16
+  
+  # De-dimensionalization settings
+  use_adaptive_reduction: true
+  use_random_projection: true
+  use_quantization: false
+  sparsity_threshold: 0.7
+  
+  # Compression settings
+  model_compression:
+    use_low_rank: true
+    use_pruning: true
+    pruning_sparsity: 0.9
+    use_distillation: false
+    quantization_bits: 8
 
-# Physics engine
+# Hybrid pipeline configuration
+hybrid:
+  max_iterations: 3
+  convergence_threshold: 0.01
+  use_modern_fallback: true
+  
+  # Physics-ML interaction
+  physics_weight: 0.7
+  ml_weight: 0.3
+  
+  # Refinement settings
+  parameter_learning_rate: 0.1
+  radial_refinement: true
+  chromatic_refinement: true
+
+# Detection configuration
+detection:
+  # Lens detection
+  use_exif: true
+  use_fingerprinting: true
+  fallback_to_generic: true
+  
+  # Defect detection
+  enable_vintage_ml: true
+  enable_statistical: true
+  combine_methods: true
+  
+  # Thresholds
+  dust_threshold: 0.5
+  scratch_threshold: 0.6
+  fungus_threshold: 0.7
+
+# Physics engine configuration
 physics:
+  # Distortion models
+  distortion_model: brown_conrady  # brown_conrady, division, rational
+  
   # Correction strengths (0-1)
-  distortion_correction: 0.9
-  chromatic_correction: 0.95
-  vignetting_correction: 0.7
+  distortion_strength: 0.8
+  chromatic_strength: 0.7
+  vignetting_strength: 0.6
   
-  # Advanced corrections
-  field_curvature: true
-  spherical_aberration: true
-  diffraction_compensation: auto
-  
-  # Character preservation
-  preserve_swirly_bokeh: true
-  preserve_soap_bubbles: true
-  preserve_vintage_contrast: true
+  # PSF deconvolution
+  deconvolve: true
+  deconv_iterations: 10
+  deconv_regularization: 0.01
 
-# Depth processing
+# Depth processing configuration
 depth:
   enabled: true
-  estimation_model: midas_dpt_large
+  model: midas  # midas, dpt, or custom
   
   # Layer processing
-  auto_layers: true
-  min_layers: 3
-  max_layers: 7
+  num_layers: 5
+  layer_overlap: 0.1
   
-  # Differential processing
-  sharp_area_strength: 1.0
-  transition_strength: 0.7
-  bokeh_area_strength: 0.3
+  # Depth-aware corrections
+  scale_by_depth: true
+  preserve_bokeh: true
 
-# Synthesis settings
+# Statistical cleanup configuration
+statistical:
+  # Preservation modes
+  mode: adaptive  # adaptive, full, artistic, minimal
+  
+  # Defect removal
+  remove_dust: true
+  remove_scratches: true
+  remove_fungus: false  # Often part of character
+  
+  # Inpainting
+  inpaint_method: vintage_knn  # vintage_knn, vintage_som, classical, neural
+  
+  # Character preservation
+  preserve_swirl: 0.9
+  preserve_flare: 0.8
+  preserve_vignetting: 0.5
+
+# Synthesis configuration
 synthesis:
   # Bokeh synthesis
   bokeh_quality: high
-  aperture_simulation: accurate
+  aperture_blades: 8
   
   # Character transfer
-  transfer_contrast: true
-  transfer_color: true
-  transfer_aberrations: true
+  transfer_strength: 0.7
+  blend_mode: adaptive
   
-  # FOV transformation
-  max_fov_expansion: 1.5
-  inpainting_method: neural  # classical, neural
+  # Artistic presets
+  enable_presets: true
+  custom_presets_path: config/presets/
 
-# Statistical cleanup
-cleanup:
-  # Detection sensitivity
-  dust_sensitivity: 0.8
-  scratch_sensitivity: 0.7
-  fungus_sensitivity: 0.6
+# Output configuration
+output:
+  # Format settings
+  jpeg_quality: 95
+  tiff_compression: none
+  preserve_metadata: true
+  embed_correction_data: true
   
-  # Preservation
-  preserve_bokeh_artifacts: true
-  adaptive_strength: true
+  # Color management
+  output_colorspace: srgb
+  preserve_input_profile: false
 
-# External integrations
-integrations:
-  # Metadata extraction
-  exiftool:
-    enabled: true
-    path: /usr/local/bin/exiftool
-  
-  # Lens database
-  lensfun:
-    enabled: true
-    auto_import: true
-  
-  # Depth estimation
-  midas:
-    model_path: ./data/models/midas
-    model_type: DPT_Large
-  
-  # Advanced calibration
-  hugin:
-    enabled: false
-    tools_path: /usr/local/bin
-
-# Performance
+# Performance configuration
 performance:
-  # Threading
-  num_threads: auto
-  batch_size: 4
+  # GPU settings
+  use_gpu: true
+  gpu_device: 0
   
-  # Memory
+  # Memory management
   max_memory_gb: 8
-  use_memory_pool: true
+  tile_size: 512
   
-  # Caching
-  cache_enabled: true
-  cache_size_gb: 2
-  cache_ttl_days: 30
+  # Optimization
+  enable_caching: true
+  optimize_for: quality  # quality, speed, or balanced
 
-# Database
-database:
-  type: sqlite
-  path: ./data/databases/vintageoptics.db
-  
-  # Connection pool
-  pool_size: 5
-  timeout: 30
-
-# Logging
+# Logging configuration
 logging:
   level: INFO
-  file: ./logs/vintageoptics.log
-  max_size_mb: 100
-  backup_count: 5
-  
-  # Component-specific levels
-  components:
-    physics: INFO
-    detection: DEBUG
-    synthesis: INFO
+  file: logs/vintageoptics.log
+  rotate_size_mb: 10
+  keep_backups: 5
 
-# API settings
-api:
+# Database configuration
+database:
+  # Lens database
+  lens_db_path: data/lens_database.db
+  
+  # Calibration storage
+  calibration_path: data/calibrations/
+  
+  # Instance fingerprints
+  fingerprint_path: data/fingerprints/
+
+# Plugin configuration
+plugins:
   enabled: true
-  host: 0.0.0.0
-  port: 8000
+  plugin_dir: plugins/
+  auto_load: true
   
-  # Rate limiting
-  rate_limit: 100
-  rate_window: 3600
-  
-  # Authentication
-  auth_enabled: false
-  api_key_header: X-API-Key
-
-# Development
-development:
-  debug: false
-  profiling: false
-  
-  # Test data
-  test_images: ./tests/fixtures/images
-  test_database: ./tests/fixtures/test.db
+  # Enabled plugins
+  enabled_plugins:
+    - vintage_film_emulation
+    - advanced_bokeh_synthesis
+    - artistic_lens_presets

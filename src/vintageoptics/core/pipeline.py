@@ -15,6 +15,7 @@ from ..statistical import AdaptiveCleanup
 from ..analysis import QualityAnalyzer
 from .config_manager import ConfigManager
 from .performance_monitor import PerformanceMonitor
+from .hybrid_pipeline import HybridPhysicsMLPipeline
 from . import ImageData, ProcessingResult, BatchResult
 
 
@@ -56,6 +57,9 @@ class VintageOpticsPipeline:
         self.depth_processor = DepthAwareProcessor(self.config)
         self.synthesizer = LensSynthesizer(self.config)
         self.cleanup_engine = AdaptiveCleanup(self.config)
+        
+        # Hybrid pipeline for advanced processing
+        self.hybrid_pipeline = HybridPhysicsMLPipeline(self.config)
         
         # Analysis
         self.quality_analyzer = QualityAnalyzer()
@@ -160,6 +164,27 @@ class VintageOpticsPipeline:
             synthesis_params=self.synthesizer.get_synthesis_report()
         )
     
+    def _process_hybrid(self, image_data: ImageData, request: ProcessingRequest) -> ProcessingResult:
+        """Hybrid processing pipeline using physics-ML iteration"""
+        
+        # Prepare metadata for hybrid pipeline
+        metadata = image_data.metadata.copy()
+        if hasattr(image_data, 'exif'):
+            metadata['exif'] = image_data.exif
+            
+        # Run hybrid pipeline
+        result = self.hybrid_pipeline.process(
+            image_data.image,
+            metadata
+        )
+        
+        # Enhance result with additional analysis
+        result.quality_metrics = self.quality_analyzer.analyze(
+            image_data.image, result.corrected_image
+        )
+        
+        return result
+    
     def batch_process(self, input_dir: str, output_dir: str,
                      mode: ProcessingMode = ProcessingMode.CORRECT,
                      **kwargs) -> BatchResult:
@@ -195,9 +220,35 @@ class VintageOpticsPipeline:
         # Generate report
         return self._generate_batch_report(results, output_dir)
     
+    def train_vintage_ml(self, training_data_dir: str, annotations_file: Optional[str] = None):
+        """Train the vintage ML components for hybrid processing"""
+        
+        # Load training images
+        training_images = []
+        image_files = self._discover_images(training_data_dir)
+        
+        for img_path in image_files[:100]:  # Limit for initial training
+            try:
+                img_data = self._load_and_analyze(img_path)
+                training_images.append(img_data.image)
+            except Exception as e:
+                logger.warning(f"Failed to load training image {img_path}: {e}")
+                
+        # Load annotations if provided
+        defect_annotations = None
+        if annotations_file and os.path.exists(annotations_file):
+            import json
+            with open(annotations_file, 'r') as f:
+                defect_annotations = json.load(f)
+                
+        # Train the hybrid pipeline's ML components
+        self.hybrid_pipeline.train_vintage_ml(training_images, defect_annotations)
+        
+        logger.info(f"Trained vintage ML on {len(training_images)} images")
+    
     def _setup_plugins(self):
         """Setup plugin system"""
-        # Stub implementation
+        # Plugin system will be implemented to allow custom processing modules
         pass
     
     def _load_and_analyze(self, image_path: str) -> ImageData:
@@ -224,21 +275,35 @@ class VintageOpticsPipeline:
         # Extract metadata if possible
         metadata = self._extract_metadata(image_path)
         
-        return ImageData(image=image, metadata=metadata)
-    
-    def _process_hybrid(self, image_data: ImageData, request: ProcessingRequest) -> ProcessingResult:
-        """Hybrid processing pipeline"""
-        # Stub implementation
-        return ProcessingResult(image_data.image, ProcessingMode.HYBRID)
+        # Estimate depth if enabled
+        depth_map = None
+        if self.config.get('depth', {}).get('enabled', False):
+            try:
+                depth_map = self.depth_processor.estimate_depth(image)
+            except Exception as e:
+                logger.warning(f"Depth estimation failed: {e}")
+        
+        return ImageData(
+            image=image, 
+            metadata=metadata,
+            depth_map=depth_map
+        )
     
     def _save_result(self, result: ProcessingResult, request: ProcessingRequest):
         """Save processing result"""
-        if request.output_path and hasattr(result, 'image'):
+        # Handle the corrected_image attribute from hybrid pipeline
+        if hasattr(result, 'corrected_image'):
+            save_image = result.corrected_image
+        elif hasattr(result, 'image'):
+            save_image = result.image
+        else:
+            logger.warning("No image to save in result")
+            return
+            
+        if request.output_path:
             # Convert RGB to BGR for OpenCV
-            if len(result.image.shape) == 3:
-                save_image = cv2.cvtColor(result.image, cv2.COLOR_RGB2BGR)
-            else:
-                save_image = result.image
+            if len(save_image.shape) == 3:
+                save_image = cv2.cvtColor(save_image, cv2.COLOR_RGB2BGR)
             
             # Determine format and quality
             ext = os.path.splitext(request.output_path)[1].lower()
@@ -251,49 +316,256 @@ class VintageOpticsPipeline:
                            [cv2.IMWRITE_TIFF_COMPRESSION, 1])
             else:
                 cv2.imwrite(request.output_path, save_image)
+                
+            # Save metadata if requested
+            if request.preserve_metadata and hasattr(result, 'metadata'):
+                import json
+                meta_path = request.output_path.rsplit('.', 1)[0] + '_metadata.json'
+                with open(meta_path, 'w') as f:
+                    json.dump(result.metadata, f, indent=2, default=str)
     
-    def _detect_applied_corrections(self, image_data: ImageData):
-        """Detect corrections already applied"""
-        return {}
+    def _detect_applied_corrections(self, image_data: ImageData) -> Dict:
+        """Detect corrections already applied using ML and heuristics"""
+        
+        # Check metadata for correction flags
+        corrections = {}
+        metadata = image_data.metadata
+        
+        # Look for software tags indicating prior processing
+        software = metadata.get('Software', '')
+        if 'lightroom' in software.lower():
+            corrections['prior_processing'] = 'lightroom'
+        elif 'darktable' in software.lower():
+            corrections['prior_processing'] = 'darktable'
+            
+        # Use vintage ML to detect characteristic patterns
+        if self.hybrid_pipeline.ml_trained:
+            # Analyze for telltale signs of correction
+            patches = self.hybrid_pipeline._extract_patches(image_data.image)
+            
+            # Look for unnaturally uniform areas (over-correction)
+            uniformity_scores = []
+            for patch in patches[:20]:  # Sample patches
+                uniformity = 1.0 - (patch.std() / (patch.mean() + 1e-8))
+                uniformity_scores.append(uniformity)
+                
+            avg_uniformity = np.mean(uniformity_scores)
+            if avg_uniformity > 0.8:
+                corrections['over_corrected'] = True
+                
+        return corrections
     
-    def _calculate_correction_params(self, lens_profile, applied_corrections, settings):
-        """Calculate correction parameters"""
-        return {}
+    def _calculate_correction_params(self, lens_profile: Dict, 
+                                   applied_corrections: Dict, 
+                                   settings: Optional[Dict]) -> Dict:
+        """Calculate correction parameters based on lens profile and prior corrections"""
+        params = {}
+        
+        # Get base parameters for lens type
+        lens_id = lens_profile.get('lens_id', 'unknown')
+        
+        # Load from lens database or use defaults
+        if lens_id == 'helios_44_58mm':
+            params.update({
+                'distortion_k1': 0.015,
+                'distortion_k2': -0.002,
+                'chromatic_red': 1.01,
+                'chromatic_blue': 0.99,
+                'vignetting_a1': 0.3,
+                'vignetting_a2': -0.15,
+                'correct_distortion': True,
+                'correct_chromatic': True,
+                'correct_vignetting': True,
+                'deconvolve': True
+            })
+        elif lens_id == 'canon_50mm_f14':
+            params.update({
+                'distortion_k1': -0.02,
+                'distortion_k2': 0.001,
+                'vignetting_a1': 0.2,
+                'vignetting_a2': -0.1,
+                'chromatic_red': 1.005,
+                'chromatic_blue': 0.995,
+                'correct_distortion': True,
+                'correct_chromatic': True,
+                'correct_vignetting': True,
+                'deconvolve': False
+            })
+        else:
+            # Generic vintage lens defaults
+            params.update({
+                'distortion_k1': 0.01,
+                'chromatic_red': 1.005,
+                'chromatic_blue': 0.995,
+                'vignetting_a1': 0.1,
+                'correct_distortion': True,
+                'correct_chromatic': True,
+                'correct_vignetting': True,
+                'deconvolve': False
+            })
+        
+        # Adjust based on prior corrections
+        if applied_corrections.get('over_corrected'):
+            # Reduce correction strength
+            for key in ['distortion_k1', 'distortion_k2']:
+                if key in params:
+                    params[key] *= 0.5
+                    
+        # Apply user settings override
+        if settings:
+            params.update(settings)
+        
+        return params
     
     def _should_use_depth(self, image_data: ImageData) -> bool:
         """Determine if depth processing should be used"""
-        return True
+        # Use depth if available and image has sufficient detail
+        if image_data.depth_map is None:
+            return False
+            
+        # Check if image has depth variation
+        if hasattr(image_data, 'depth_map'):
+            depth_range = image_data.depth_map.max() - image_data.depth_map.min()
+            return depth_range > 0.1  # Threshold for meaningful depth
+            
+        return False
     
-    def _load_lens_profile(self, lens_id: str):
-        """Load lens profile"""
-        return {'lens_id': lens_id}
+    def _load_lens_profile(self, lens_id: str) -> Dict:
+        """Load lens profile from database or library"""
+        # This would query the lens database
+        # For now, return mock profiles
+        profiles = {
+            'helios_44_58mm': {
+                'lens_id': 'helios_44_58mm',
+                'name': 'Helios 44-2 58mm f/2',
+                'type': 'vintage',
+                'mount': 'M42',
+                'character': {
+                    'swirly_bokeh': 0.8,
+                    'sharpness_center': 0.9,
+                    'sharpness_edge': 0.4,
+                    'chromatic_aberration': 0.6,
+                    'vignetting': 0.7
+                }
+            },
+            'canon_50mm_f14': {
+                'lens_id': 'canon_50mm_f14',
+                'name': 'Canon FD 50mm f/1.4',
+                'type': 'vintage',
+                'mount': 'Canon FD',
+                'character': {
+                    'swirly_bokeh': 0.2,
+                    'sharpness_center': 0.95,
+                    'sharpness_edge': 0.7,
+                    'chromatic_aberration': 0.3,
+                    'vignetting': 0.5
+                }
+            }
+        }
+        
+        return profiles.get(lens_id, {'lens_id': lens_id})
     
-    def _discover_images(self, input_dir: str):
+    def _discover_images(self, input_dir: str) -> List[str]:
         """Discover images in directory"""
-        return []
+        supported_formats = {'.jpg', '.jpeg', '.png', '.tiff', '.tif', 
+                           '.bmp', '.dng', '.cr2', '.nef', '.arw'}
+        
+        images = []
+        for root, dirs, files in os.walk(input_dir):
+            for file in files:
+                if os.path.splitext(file)[1].lower() in supported_formats:
+                    images.append(os.path.join(root, file))
+                    
+        return sorted(images)
     
-    def _group_by_lens(self, images):
-        """Group images by lens"""
-        return {}
+    def _group_by_lens(self, images: List[str]) -> Dict[str, List[str]]:
+        """Group images by detected lens for batch efficiency"""
+        groups = {}
+        
+        for img_path in images:
+            try:
+                # Quick lens detection from EXIF
+                metadata = self._extract_metadata(img_path)
+                lens_info = metadata.get('LensModel', 'unknown')
+                
+                if lens_info not in groups:
+                    groups[lens_info] = []
+                groups[lens_info].append(img_path)
+                
+            except Exception:
+                # If detection fails, put in unknown group
+                if 'unknown' not in groups:
+                    groups['unknown'] = []
+                groups['unknown'].append(img_path)
+                
+        return groups
     
-    def _cache_lens_profile(self, lens_group):
-        """Cache lens profile"""
+    def _cache_lens_profile(self, lens_group: str):
+        """Cache lens profile for batch processing"""
+        # This would load and cache the profile
         pass
     
-    def _parallel_process(self, images, mode, **kwargs):
-        """Process images in parallel"""
-        return []
+    def _parallel_process(self, images: List[str], mode: ProcessingMode, **kwargs) -> List:
+        """Process images in parallel using multiprocessing"""
+        from multiprocessing import Pool, cpu_count
+        
+        # Prepare process function
+        def process_single(img_path):
+            try:
+                request = ProcessingRequest(
+                    image_path=img_path,
+                    mode=mode,
+                    **kwargs
+                )
+                return self.process(request)
+            except Exception as e:
+                logger.error(f"Failed to process {img_path}: {e}")
+                return None
+                
+        # Use process pool
+        n_workers = min(cpu_count(), len(images))
+        with Pool(n_workers) as pool:
+            results = pool.map(process_single, images)
+            
+        # Filter out failures
+        return [r for r in results if r is not None]
     
-    def _generate_batch_report(self, results, output_dir):
+    def _generate_batch_report(self, results: List[ProcessingResult], 
+                             output_dir: str) -> BatchResult:
         """Generate batch processing report"""
-        return BatchResult(results, {'processed': len(results)})
+        report = {
+            'total_processed': len(results),
+            'successful': sum(1 for r in results if hasattr(r, 'corrected_image')),
+            'processing_times': {},
+            'quality_improvements': {},
+            'detected_lenses': {}
+        }
+        
+        # Aggregate statistics
+        for result in results:
+            if hasattr(result, 'lens_info'):
+                lens = result.lens_info.get('name', 'unknown')
+                report['detected_lenses'][lens] = report['detected_lenses'].get(lens, 0) + 1
+                
+            if hasattr(result, 'performance_metrics'):
+                for metric, value in result.performance_metrics.items():
+                    if metric not in report['processing_times']:
+                        report['processing_times'][metric] = []
+                    report['processing_times'][metric].append(value)
+                    
+        # Save report
+        import json
+        report_path = os.path.join(output_dir, 'batch_report.json')
+        with open(report_path, 'w') as f:
+            json.dump(report, f, indent=2)
+            
+        return BatchResult(results, report)
     
     def _extract_metadata(self, image_path: str) -> Dict:
         """Extract metadata from image file"""
-        # Basic metadata extraction
         metadata = {'file_path': image_path}
         
-        # Try to get EXIF data
+        # Try EXIF extraction
         try:
             import PIL.Image
             import PIL.ExifTags
@@ -305,40 +577,20 @@ class VintageOpticsPipeline:
                         tag = PIL.ExifTags.TAGS.get(tag_id, tag_id)
                         metadata[tag] = value
         except Exception:
-            pass  # EXIF extraction failed, continue without it
-        
+            pass
+            
+        # Try ExifTool for more complete metadata
+        try:
+            from ..integrations import ExifToolIntegration
+            exiftool = ExifToolIntegration()
+            detailed_meta = exiftool.extract_metadata(image_path)
+            metadata.update(detailed_meta)
+        except Exception:
+            pass
+            
         return metadata
-    
-    def _calculate_correction_params(self, lens_profile, applied_corrections, settings):
-        """Calculate correction parameters based on lens profile"""
-        params = {}
-        
-        # Get typical corrections for this lens type
-        if lens_profile.get('lens_id') == 'helios_44_58mm':
-            params.update({
-                'distortion_k1': 0.015,
-                'distortion_k2': -0.002,
-                'chromatic_red': 1.01,
-                'chromatic_blue': 0.99
-            })
-        elif lens_profile.get('lens_id') == 'canon_50mm_f14':
-            params.update({
-                'distortion_k1': -0.02,
-                'distortion_k2': 0.001,
-                'vignetting_a1': 0.2,
-                'vignetting_a2': -0.1
-            })
-        else:
-            # Generic corrections
-            params.update({
-                'distortion_k1': 0.01,
-                'chromatic_red': 1.005,
-                'chromatic_blue': 0.995,
-                'vignetting_a1': 0.1
-            })
-        
-        # Apply user settings override
-        if settings:
-            params.update(settings)
-        
-        return params
+
+
+# Import logger
+import logging
+logger = logging.getLogger(__name__)
