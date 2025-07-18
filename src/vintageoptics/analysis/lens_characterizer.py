@@ -21,6 +21,12 @@ from ..hyperdimensional import (
 from ..detection import VintageDetector, ElectronicDetector
 from ..physics.optics_engine import OpticsEngine
 from ..types.optics import LensParameters, OpticalDefect
+from ..constraints import (
+    ConstraintSpecification,
+    OrthogonalErrorAnalyzer,
+    UncertaintyTracker,
+    UncertaintyEstimate
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +39,15 @@ class LensCharacteristics:
     max_aperture: float
     min_aperture: float
     optical_formula: Optional[str] = None
+    
+    # Constraint validation results
+    constraint_violations: Optional[Dict[str, Tuple[bool, Optional[str]]]] = None
+    
+    # Uncertainty estimates
+    uncertainty_estimates: Optional[Dict[str, UncertaintyEstimate]] = None
+    
+    # Error decomposition
+    error_decomposition: Optional[Dict[str, np.ndarray]] = None
     
     # Optical characteristics
     vignetting_profile: Optional[np.ndarray] = None
@@ -71,13 +86,16 @@ class LensCharacterizer:
     lens signature matching.
     """
     
-    def __init__(self, use_hd: bool = True, hd_dimension: int = 10000):
+    def __init__(self, use_hd: bool = True, hd_dimension: int = 10000, 
+                 use_constraints: bool = True, use_uncertainty: bool = True):
         """
         Initialize the lens characterizer.
         
         Args:
             use_hd: Whether to use hyperdimensional computing features
             hd_dimension: Dimension for hypervectors (if use_hd is True)
+            use_constraints: Whether to validate physical constraints
+            use_uncertainty: Whether to track uncertainty
         """
         self.use_hd = use_hd
         self.hd_analyzer = HyperdimensionalLensAnalyzer(hd_dimension) if use_hd else None
@@ -89,6 +107,17 @@ class LensCharacterizer:
         # Physics engine for optical analysis
         self.optics_engine = OpticsEngine()
         
+        # Constraint system
+        self.use_constraints = use_constraints
+        self.constraint_spec = ConstraintSpecification() if use_constraints else None
+        
+        # Error analysis
+        self.error_analyzer = OrthogonalErrorAnalyzer()
+        
+        # Uncertainty tracking
+        self.use_uncertainty = use_uncertainty
+        self.uncertainty_tracker = UncertaintyTracker() if use_uncertainty else None
+        
         # Lens database
         self.known_lenses = {}
         self._load_lens_database()
@@ -96,7 +125,9 @@ class LensCharacterizer:
     def analyze(self, 
                 image: Union[str, Path, np.ndarray],
                 reference_images: Optional[List[np.ndarray]] = None,
-                full_analysis: bool = True) -> LensCharacteristics:
+                full_analysis: bool = True,
+                validate_constraints: bool = True,
+                track_uncertainty: bool = True) -> LensCharacteristics:
         """
         Perform comprehensive lens analysis.
         
@@ -123,6 +154,14 @@ class LensCharacterizer:
             min_aperture=16.0
         )
         
+        # Initialize uncertainty tracking if enabled
+        if self.use_uncertainty and track_uncertainty:
+            metadata = {'iso': 100, 'bit_depth': 8}  # Default metadata
+            initial_uncertainty = self.uncertainty_tracker.estimate_input_uncertainty(
+                image, metadata
+            )
+            characteristics.uncertainty_estimates = {'input': initial_uncertainty}
+        
         # Extract metadata if available
         self._extract_metadata(image, characteristics)
         
@@ -131,18 +170,29 @@ class LensCharacterizer:
         logger.info(f"Detected lens type: {lens_type}")
         
         if full_analysis:
+            # Perform orthogonal error decomposition
+            error_decomposition = self.error_analyzer.decompose_errors(
+                image, 
+                lens_profile={'type': lens_type},
+                sensor_profile=None
+            )
+            characteristics.error_decomposition = error_decomposition
+            
+            # Use clean signal for analysis
+            analysis_image = (error_decomposition['clean_signal'] * 255).astype(np.uint8)
+            
             # Optical analysis
-            self._analyze_optics(image, characteristics)
+            self._analyze_optics(analysis_image, characteristics)
             
             # Defect detection
-            self._detect_defects(image, characteristics)
+            self._detect_defects(analysis_image, characteristics)
             
             # Quality assessment
-            self._assess_quality(image, characteristics)
+            self._assess_quality(analysis_image, characteristics)
             
             # HD analysis if enabled
             if self.use_hd:
-                self._perform_hd_analysis(image, characteristics)
+                self._perform_hd_analysis(analysis_image, characteristics)
             
             # Match against known lenses
             if self.use_hd and characteristics.hyperdimensional_signature is not None:
@@ -150,6 +200,14 @@ class LensCharacterizer:
                 if matched_lens:
                     logger.info(f"Matched lens: {matched_lens}")
                     characteristics.lens_model = matched_lens
+            
+            # Validate constraints if enabled
+            if self.use_constraints and validate_constraints:
+                self._validate_constraints(image, analysis_image, characteristics)
+            
+            # Track uncertainty through analysis
+            if self.use_uncertainty and track_uncertainty:
+                self._track_analysis_uncertainty(characteristics)
         
         # Calculate overall quality score
         characteristics.overall_quality = self._calculate_overall_quality(characteristics)
@@ -747,6 +805,54 @@ class LensCharacterizer:
         
         return comparison
     
+    def _validate_constraints(self, original: np.ndarray, corrected: np.ndarray,
+                            characteristics: LensCharacteristics):
+        """Validate physical constraints."""
+        metadata = {
+            'vignetting_map': characteristics.vignetting_profile,
+            'f_stop': characteristics.max_aperture,
+            'resolution': max(original.shape[:2]),
+            'spherical_aberration': characteristics.distortion_coefficients.get('k1', 0) if characteristics.distortion_coefficients else 0,
+            'chromatic_aberration': characteristics.chromatic_aberration.get('lateral', 0) if characteristics.chromatic_aberration else 0
+        }
+        
+        characteristics.constraint_violations = self.constraint_spec.validate_correction(
+            original, corrected, metadata
+        )
+        
+        # Log any violations
+        for constraint, (valid, message) in characteristics.constraint_violations.items():
+            if not valid:
+                logger.warning(f"Constraint violation: {constraint} - {message}")
+    
+    def _track_analysis_uncertainty(self, characteristics: LensCharacteristics):
+        """Track uncertainty through analysis pipeline."""
+        if not characteristics.uncertainty_estimates:
+            return
+        
+        # Define analysis pipeline steps
+        pipeline_steps = [
+            ('vignetting_analysis', {'type': 'photometric'}),
+            ('distortion_analysis', {'type': 'geometric'}),
+            ('chromatic_analysis', {'type': 'chromatic'}),
+            ('quality_assessment', {'type': 'combined'})
+        ]
+        
+        # Propagate uncertainty
+        final_uncertainty = self.uncertainty_tracker.propagate_through_pipeline(
+            characteristics.uncertainty_estimates['input'],
+            pipeline_steps
+        )
+        
+        characteristics.uncertainty_estimates['final'] = final_uncertainty
+        
+        # Generate uncertainty report
+        uncertainty_report = self.uncertainty_tracker.create_uncertainty_report(
+            characteristics.uncertainty_estimates
+        )
+        
+        logger.info(f"Uncertainty report: {uncertainty_report['summary']}")
+    
     def generate_report(self, characteristics: LensCharacteristics) -> str:
         """Generate a human-readable report of lens characteristics."""
         report = []
@@ -794,6 +900,39 @@ class LensCharacterizer:
             report.append("\nHyperdimensional Analysis:")
             report.append(f"  HD Signature Computed: Yes")
             report.append(f"  Topological Features: {len(characteristics.topological_features or [])}")
+        
+        # Constraint validation
+        if characteristics.constraint_violations:
+            report.append("\nConstraint Validation:")
+            violations = [name for name, (valid, _) in characteristics.constraint_violations.items() if not valid]
+            if violations:
+                report.append(f"  Violations: {', '.join(violations)}")
+            else:
+                report.append("  All constraints satisfied")
+        
+        # Uncertainty estimates
+        if characteristics.uncertainty_estimates:
+            report.append("\nUncertainty Analysis:")
+            if 'final' in characteristics.uncertainty_estimates:
+                final_unc = characteristics.uncertainty_estimates['final']
+                report.append(f"  Mean uncertainty: {np.mean(final_unc.std):.1%}")
+                report.append(f"  Max uncertainty: {np.max(final_unc.std):.1%}")
+        
+        # Error decomposition
+        if characteristics.error_decomposition:
+            report.append("\nError Decomposition:")
+            analog_errors = characteristics.error_decomposition.get('analog_errors', {})
+            digital_errors = characteristics.error_decomposition.get('digital_errors', {})
+            
+            if analog_errors:
+                report.append("  Analog/Optical errors detected:")
+                for error_type in analog_errors:
+                    report.append(f"    - {error_type}")
+            
+            if digital_errors:
+                report.append("  Digital/Sensor errors detected:")
+                for error_type in digital_errors:
+                    report.append(f"    - {error_type}")
         
         return "\n".join(report)
 
