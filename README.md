@@ -33,6 +33,37 @@ VintageOptics is a comprehensive Python library for vintage lens correction, def
 - **Coating-specific effects** (uncoated, single-coated, multi-coated)
 - **Lens flare and ghost generation** based on optical formula
 
+## 🎨 Graphical User Interface
+
+VintageOptics now includes a modern web-based GUI for easy testing and deployment!
+
+### GUI Features
+- Intuitive drag-and-drop interface
+- Real-time preview of processing results
+- Pre-configured vintage lens profiles
+- Interactive defect simulation
+- Processing statistics and quality metrics
+
+### Running the GUI
+
+```bash
+# Quick start - runs both backend and frontend
+./run_with_gui.sh
+```
+
+Or manually:
+```bash
+# Terminal 1: Start the backend API
+python frontend_api.py
+
+# Terminal 2: Start the frontend
+cd frontend && npm start
+```
+
+The GUI will be available at `http://localhost:3000`
+
+See [frontend/README.md](frontend/README.md) for detailed GUI documentation.
+
 ## 🚀 Quick Start
 
 ### Installation
