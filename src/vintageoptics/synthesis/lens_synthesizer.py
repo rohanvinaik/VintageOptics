@@ -74,6 +74,10 @@ class LensSynthesizer:
         # Precomputed kernels for efficiency
         self._init_kernels()
         
+        # Optional synthesis pipeline (can be set later)
+        self.synthesis_pipeline = None
+        self.depth_estimator = None
+        
     def _init_kernels(self):
         """Initialize commonly used kernels."""
         # Gaussian kernels for various effects
@@ -586,6 +590,98 @@ class LensSynthesizer:
             blended.hd_signature /= np.linalg.norm(blended.hd_signature)
         
         return blended
+    
+    def get_lens_profile(self, lens_name: str) -> Optional[LensProfile]:
+        """
+        Get a lens profile by name from the characteristic library.
+        
+        Args:
+            lens_name: Name of the lens profile
+            
+        Returns:
+            LensProfile if found, None otherwise
+        """
+        return self.char_library.get_profile(lens_name)
+    
+    def apply_lens_to_image(self, image: np.ndarray, lens_name: str, strength: float = 1.0) -> np.ndarray:
+        """
+        Apply named lens characteristics using synthesis pipeline when available.
+        
+        This method provides a unified interface that:
+        1. First attempts to use the synthesis pipeline if available
+        2. Falls back to direct application if pipeline is not available or fails
+        3. Provides proper logging for debugging
+        
+        Args:
+            image: Input image as numpy array
+            lens_name: Name of the lens profile to apply
+            strength: Effect strength (0-1)
+            
+        Returns:
+            Processed image with lens effects applied
+        """
+        # Get the lens profile
+        lens_profile = self.get_lens_profile(lens_name)
+        if not lens_profile:
+            logger.warning(f"Lens profile not found: {lens_name}")
+            return image
+        
+        # Try synthesis pipeline first if available
+        if hasattr(self, 'synthesis_pipeline') and self.synthesis_pipeline is not None:
+            try:
+                logger.info(f"Attempting to apply lens '{lens_name}' using synthesis pipeline")
+                result = self.synthesis_pipeline.process(
+                    image,
+                    lens_profile=lens_profile,
+                    strength=strength
+                )
+                logger.info(f"Successfully applied lens using synthesis pipeline")
+                return result
+            except AttributeError as e:
+                logger.warning(f"Synthesis pipeline missing required method: {e}")
+            except Exception as e:
+                logger.warning(f"Synthesis pipeline failed: {e}, falling back to direct application")
+        
+        # Fallback to direct application
+        logger.info(f"Applying lens '{lens_name}' using direct method")
+        
+        # Check if we should estimate depth for bokeh effects
+        depth_map = None
+        if (lens_profile.bokeh_quality > 0 and 
+            self.config.bokeh_strength > 0 and 
+            strength > 0):
+            try:
+                # Try to estimate depth if we have a depth estimator
+                if hasattr(self, 'depth_estimator') and self.depth_estimator is not None:
+                    logger.debug("Estimating depth map for bokeh effect")
+                    depth_map = self.depth_estimator.estimate(image)
+            except Exception as e:
+                logger.debug(f"Depth estimation failed, proceeding without bokeh: {e}")
+        
+        # Apply the lens effects
+        result = self.apply(image, lens_profile, depth_map=depth_map, strength=strength)
+        
+        return result
+    
+    def set_synthesis_pipeline(self, pipeline) -> None:
+        """
+        Set the synthesis pipeline for advanced processing.
+        
+        Args:
+            pipeline: SynthesisPipeline instance
+        """
+        self.synthesis_pipeline = pipeline
+        logger.info("Synthesis pipeline configured")
+    
+    def set_depth_estimator(self, estimator) -> None:
+        """
+        Set the depth estimator for bokeh effects.
+        
+        Args:
+            estimator: Depth estimator instance with an 'estimate' method
+        """
+        self.depth_estimator = estimator
+        logger.info("Depth estimator configured")
 
 
 # Convenience functions
