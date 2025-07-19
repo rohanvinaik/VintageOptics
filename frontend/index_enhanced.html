@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VintageOptics - Enhanced with Equipment Context</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 40px 0;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+            border-bottom: 1px solid #2a2a2a;
+            margin-bottom: 40px;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            font-weight: 200;
+            letter-spacing: -1px;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #fff, #888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .control-panel {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid #2a2a2a;
+            height: fit-content;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+        }
+        
+        .section-title {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 16px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            border-radius: 2px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px 15px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        }
+        
+        .metadata-info {
+            background: #0a0a0a;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+        }
+        
+        .metadata-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #1a1a1a;
+        }
+        
+        .metadata-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        
+        .metadata-label {
+            color: #666;
+        }
+        
+        .metadata-value {
+            color: #4CAF50;
+            font-weight: 500;
+        }
+        
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .file-upload input[type=file] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .file-upload-label {
+            display: block;
+            padding: 40px;
+            background: #0a0a0a;
+            border: 2px dashed #333;
+            border-radius: 12px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .file-upload:hover .file-upload-label {
+            border-color: #4CAF50;
+            background: #0f0f0f;
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .checkbox-item {
+            position: relative;
+            flex: 1 1 calc(50% - 5px);
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+        }
+        
+        .checkbox-item label {
+            display: block;
+            padding: 8px 12px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            margin: 0;
+        }
+        
+        .checkbox-item input[type="checkbox"]:checked + label {
+            background: #1a3a1a;
+            border-color: #4CAF50;
+            color: #4CAF50;
+        }
+        
+        .process-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 20px;
+        }
+        
+        .process-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(76, 175, 80, 0.3);
+        }
+        
+        .process-button:disabled {
+            background: #333;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .image-viewer {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid #2a2a2a;
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .viewer-title {
+            font-size: 1.2rem;
+            color: #fff;
+        }
+        
+        .viewer-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .viewer-button {
+            padding: 8px 16px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #aaa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .viewer-button:hover {
+            border-color: #4CAF50;
+            color: #4CAF50;
+        }
+        
+        .image-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0a0a0a;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .image-preview {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 4px;
+        }
+        
+        .placeholder {
+            text-align: center;
+            color: #666;
+        }
+        
+        .placeholder-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #2a2a2a;
+        }
+        
+        .stat-item {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #4CAF50;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .processing-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid #333;
+            border-top-color: #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .processing-text {
+            color: #aaa;
+            font-size: 1.1rem;
+        }
+        
+        .manual-override {
+            background: #151515;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        
+        .override-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+        
+        .toggle-switch {
+            width: 40px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            position: relative;
+            transition: background 0.3s ease;
+        }
+        
+        .toggle-switch.active {
+            background: #4CAF50;
+        }
+        
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s ease;
+        }
+        
+        .toggle-switch.active::after {
+            transform: translateX(20px);
+        }
+        
+        .override-fields {
+            display: none;
+        }
+        
+        .override-fields.active {
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>VintageOptics</h1>
+            <p class="subtitle">Advanced Lens Correction & Synthesis</p>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="main-grid">
+            <div class="control-panel">
+                <div class="section">
+                    <h3 class="section-title">Image Upload</h3>
+                    <div class="file-upload">
+                        <input type="file" id="fileInput" accept="image/*">
+                        <label for="fileInput" class="file-upload-label">
+                            <div class="upload-icon">📷</div>
+                            <div>Drop image here or click to browse</div>
+                            <div style="font-size: 0.85rem; color: #666; margin-top: 5px;">
+                                Supports JPEG, PNG, TIFF, RAW
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3 class="section-title">Extracted Metadata</h3>
+                    <div class="metadata-info" id="metadataInfo">
+                        <div style="text-align: center; color: #666;">
+                            No image loaded
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3 class="section-title">Equipment Context</h3>
+                    
+                    <div class="form-group">
+                        <label for="cameraModel">Camera Model</label>
+                        <input type="text" id="cameraModel" placeholder="e.g., Canon 5D Mark IV">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="lensModel">Lens Model</label>
+                        <input type="text" id="lensModel" placeholder="e.g., Canon FD 50mm f/1.4">
+                    </div>
+                    
+                    <div class="manual-override">
+                        <div class="override-toggle" onclick="toggleManualOverride()">
+                            <div class="toggle-switch" id="overrideToggle"></div>
+                            <span>Manual Parameter Override</span>
+                        </div>
+                        
+                        <div class="override-fields" id="overrideFields">
+                            <div class="form-group">
+                                <label for="focalLength">Focal Length (mm)</label>
+                                <input type="number" id="focalLength" placeholder="50" min="8" max="800">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="aperture">Aperture (f-stop)</label>
+                                <input type="number" id="aperture" placeholder="1.4" min="0.7" max="32" step="0.1">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="distortionK1">Distortion K1</label>
+                                <input type="number" id="distortionK1" placeholder="-0.02" min="-1" max="1" step="0.001">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="distortionK2">Distortion K2</label>
+                                <input type="number" id="distortionK2" placeholder="0.005" min="-1" max="1" step="0.001">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3 class="section-title">Lens Profile</h3>
+                    <select id="lensProfile">
+                        <option value="auto">Auto-detect from metadata</option>
+                        <option value="canon-50mm-f1.4">Canon FD 50mm f/1.4</option>
+                        <option value="helios-44-2">Helios 44-2 58mm f/2</option>
+                        <option value="custom">Custom (use manual parameters)</option>
+                    </select>
+                </div>
+                
+                <div class="section">
+                    <h3 class="section-title">Correction Mode</h3>
+                    <select id="correctionMode">
+                        <option value="hybrid">Hybrid (Smart Balance)</option>
+                        <option value="correction">Full Correction</option>
+                        <option value="synthesis">Synthesis Only</option>
+                        <option value="none">No Correction</option>
+                    </select>
+                </div>
+                
+                <div class="section">
+                    <h3 class="section-title">Vintage Defects</h3>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="defectDust">
+                            <label for="defectDust">Dust</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="defectFungus">
+                            <label for="defectFungus">Fungus</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="defectScratches">
+                            <label for="defectScratches">Scratches</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="defectHaze">
+                            <label for="defectHaze">Haze</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="defectSeparation">
+                            <label for="defectSeparation">Separation</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="defectCoating">
+                            <label for="defectCoating">Coating Wear</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="process-button" id="processButton" onclick="processImage()" disabled>
+                    Process Image
+                </button>
+            </div>
+            
+            <div class="image-viewer">
+                <div class="viewer-header">
+                    <h3 class="viewer-title">Image Preview</h3>
+                    <div class="viewer-controls">
+                        <button class="viewer-button" onclick="compareImages()">Compare</button>
+                        <button class="viewer-button" onclick="downloadImage()">Download</button>
+                    </div>
+                </div>
+                
+                <div class="image-container" id="imageContainer">
+                    <div class="placeholder">
+                        <div class="placeholder-icon">🖼️</div>
+                        <p>Upload an image to begin</p>
+                    </div>
+                </div>
+                
+                <div class="stats-bar" id="statsBar" style="display: none;">
+                    <div class="stat-item">
+                        <div class="stat-value" id="qualityScore">-</div>
+                        <div class="stat-label">Quality Score</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="processingTime">-</div>
+                        <div class="stat-label">Processing Time</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="defectsDetected">-</div>
+                        <div class="stat-label">Defects Detected</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="correctionApplied">-</div>
+                        <div class="stat-label">Correction Applied</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let originalImage = null;
+        let processedImage = null;
+        let extractedMetadata = {};
+        let currentFile = null;
+        
+        // File input handler
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                currentFile = file;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    originalImage = e.target.result;
+                    displayImage(originalImage);
+                    document.getElementById('processButton').disabled = false;
+                    
+                    // Extract metadata
+                    extractMetadata(file);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        async function extractMetadata(file) {
+            // Show loading state
+            const metadataInfo = document.getElementById('metadataInfo');
+            metadataInfo.innerHTML = '<div style="text-align: center; color: #666;">Extracting metadata...</div>';
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('http://localhost:8000/api/extract-metadata', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const metadata = await response.json();
+                    extractedMetadata = metadata;
+                    displayMetadata(metadata);
+                    
+                    // Auto-fill equipment fields if detected
+                    if (metadata.camera && metadata.camera.model !== 'Unknown') {
+                        document.getElementById('cameraModel').value = 
+                            `${metadata.camera.make} ${metadata.camera.model}`.trim();
+                    }
+                    if (metadata.lens && metadata.lens.model !== 'Unknown') {
+                        document.getElementById('lensModel').value = metadata.lens.model;
+                    }
+                } else {
+                    // Fallback to simulated metadata
+                    simulateMetadata();
+                }
+            } catch (error) {
+                console.error('Metadata extraction failed:', error);
+                simulateMetadata();
+            }
+        }
+        
+        function simulateMetadata() {
+            // Simulated metadata for demo purposes
+            const metadata = {
+                camera: {
+                    make: 'Canon',
+                    model: 'EOS 5D Mark IV'
+                },
+                lens: {
+                    model: 'Canon EF 50mm f/1.4 USM',
+                    focal_length: '50mm',
+                    aperture: 'f/2.8'
+                },
+                settings: {
+                    iso: '400',
+                    shutter_speed: '1/125',
+                    aperture: 'f/2.8'
+                }
+            };
+            
+            extractedMetadata = metadata;
+            displayMetadata(metadata);
+            
+            // Auto-fill equipment fields
+            document.getElementById('cameraModel').value = 
+                `${metadata.camera.make} ${metadata.camera.model}`;
+            document.getElementById('lensModel').value = metadata.lens.model;
+        }
+        
+        function displayMetadata(metadata) {
+            const metadataInfo = document.getElementById('metadataInfo');
+            metadataInfo.innerHTML = '';
+            
+            // Camera info
+            if (metadata.camera) {
+                const cameraItem = document.createElement('div');
+                cameraItem.className = 'metadata-item';
+                cameraItem.innerHTML = `
+                    <span class="metadata-label">Camera:</span>
+                    <span class="metadata-value">${metadata.camera.make} ${metadata.camera.model}</span>
+                `;
+                metadataInfo.appendChild(cameraItem);
+            }
+            
+            // Lens info
+            if (metadata.lens && metadata.lens.model !== 'Unknown') {
+                const lensItem = document.createElement('div');
+                lensItem.className = 'metadata-item';
+                lensItem.innerHTML = `
+                    <span class="metadata-label">Lens:</span>
+                    <span class="metadata-value">${metadata.lens.model}</span>
+                `;
+                metadataInfo.appendChild(lensItem);
+            }
+            
+            // Settings
+            if (metadata.settings) {
+                const settings = metadata.settings;
+                if (settings.focal_length !== 'Unknown') {
+                    const focalItem = document.createElement('div');
+                    focalItem.className = 'metadata-item';
+                    focalItem.innerHTML = `
+                        <span class="metadata-label">Focal Length:</span>
+                        <span class="metadata-value">${settings.focal_length}</span>
+                    `;
+                    metadataInfo.appendChild(focalItem);
+                }
+                
+                if (settings.aperture !== 'Unknown') {
+                    const apertureItem = document.createElement('div');
+                    apertureItem.className = 'metadata-item';
+                    apertureItem.innerHTML = `
+                        <span class="metadata-label">Aperture:</span>
+                        <span class="metadata-value">${settings.aperture}</span>
+                    `;
+                    metadataInfo.appendChild(apertureItem);
+                }
+                
+                if (settings.iso !== 'Unknown') {
+                    const isoItem = document.createElement('div');
+                    isoItem.className = 'metadata-item';
+                    isoItem.innerHTML = `
+                        <span class="metadata-label">ISO:</span>
+                        <span class="metadata-value">${settings.iso}</span>
+                    `;
+                    metadataInfo.appendChild(isoItem);
+                }
+                
+                if (settings.shutter_speed !== 'Unknown') {
+                    const shutterItem = document.createElement('div');
+                    shutterItem.className = 'metadata-item';
+                    shutterItem.innerHTML = `
+                        <span class="metadata-label">Shutter:</span>
+                        <span class="metadata-value">${settings.shutter_speed}</span>
+                    `;
+                    metadataInfo.appendChild(shutterItem);
+                }
+            }
+            
+            if (metadataInfo.children.length === 0) {
+                metadataInfo.innerHTML = '<div style="text-align: center; color: #666;">No metadata found</div>';
+            }
+        }
+        
+        function displayImage(imageSrc) {
+            const container = document.getElementById('imageContainer');
+            container.innerHTML = `<img src="${imageSrc}" class="image-preview" alt="Preview">`;
+        }
+        
+        function toggleManualOverride() {
+            const toggle = document.getElementById('overrideToggle');
+            const fields = document.getElementById('overrideFields');
+            
+            toggle.classList.toggle('active');
+            fields.classList.toggle('active');
+        }
+        
+        async function processImage() {
+            const button = document.getElementById('processButton');
+            button.disabled = true;
+            button.textContent = 'Processing...';
+            
+            // Show processing overlay
+            const container = document.getElementById('imageContainer');
+            const processingOverlay = document.createElement('div');
+            processingOverlay.className = 'processing-overlay';
+            processingOverlay.innerHTML = `
+                <div class="spinner"></div>
+                <div class="processing-text">Applying vintage lens corrections...</div>
+            `;
+            container.appendChild(processingOverlay);
+            
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('file', currentFile);
+            
+            // Build query parameters including equipment context
+            const params = new URLSearchParams({
+                lens_profile: document.getElementById('lensProfile').value,
+                correction_mode: document.getElementById('correctionMode').value,
+                defect_dust: document.getElementById('defectDust').checked,
+                defect_fungus: document.getElementById('defectFungus').checked,
+                defect_scratches: document.getElementById('defectScratches').checked,
+                defect_haze: document.getElementById('defectHaze').checked,
+                defect_separation: document.getElementById('defectSeparation').checked,
+                defect_coating: document.getElementById('defectCoating').checked,
+                // Equipment context
+                camera_model: document.getElementById('cameraModel').value,
+                lens_model: document.getElementById('lensModel').value,
+            });
+            
+            // Add manual override parameters if enabled
+            if (document.getElementById('overrideToggle').classList.contains('active')) {
+                const focalLength = document.getElementById('focalLength').value;
+                const aperture = document.getElementById('aperture').value;
+                const k1 = document.getElementById('distortionK1').value;
+                const k2 = document.getElementById('distortionK2').value;
+                
+                if (focalLength) params.append('focal_length', focalLength);
+                if (aperture) params.append('aperture', aperture);
+                if (k1) params.append('distortion_k1', k1);
+                if (k2) params.append('distortion_k2', k2);
+            }
+            
+            try {
+                console.log('Sending request to:', `http://localhost:8000/api/process/enhanced?${params}`);
+                const response = await fetch(`http://localhost:8000/api/process/enhanced?${params}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Server error:', errorText);
+                    throw new Error(`Processing failed: ${response.status} - ${errorText}`);
+                }
+                
+                const blob = await response.blob();
+                processedImage = URL.createObjectURL(blob);
+                
+                // Display processed image
+                displayImage(processedImage);
+                
+                // Update stats
+                const stats = {
+                    quality: response.headers.get('x-quality-score') || '0',
+                    time: response.headers.get('x-processing-time') || '0s',
+                    defects: response.headers.get('x-defects-detected') || '0',
+                    correction: response.headers.get('x-correction-applied') || '0'
+                };
+                
+                updateStats(stats);
+                
+            } catch (error) {
+                console.error('Processing error:', error);
+                alert('Processing failed. Please try again.');
+            } finally {
+                // Remove processing overlay
+                if (processingOverlay.parentNode) {
+                    processingOverlay.remove();
+                }
+                button.disabled = false;
+                button.textContent = 'Process Image';
+            }
+        }
+        
+        function updateStats(stats) {
+            document.getElementById('statsBar').style.display = 'flex';
+            document.getElementById('qualityScore').textContent = stats.quality + '%';
+            document.getElementById('processingTime').textContent = stats.time;
+            document.getElementById('defectsDetected').textContent = stats.defects;
+            document.getElementById('correctionApplied').textContent = stats.correction + '%';
+        }
+        
+        function compareImages() {
+            if (!originalImage || !processedImage) return;
+            
+            // Simple toggle between original and processed
+            const container = document.getElementById('imageContainer');
+            const currentSrc = container.querySelector('img').src;
+            
+            if (currentSrc === processedImage) {
+                displayImage(originalImage);
+            } else {
+                displayImage(processedImage);
+            }
+        }
+        
+        function downloadImage() {
+            if (!processedImage) return;
+            
+            const a = document.createElement('a');
+            a.href = processedImage;
+            a.download = 'vintageoptics_processed.jpg';
+            a.click();
+        }
+    </script>
+</body>
+</html>
