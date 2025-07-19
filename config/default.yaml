@@ -1,0 +1,199 @@
+# VintageOptics Configuration
+# Character-preserving lens correction with vintage ML
+
+# Pipeline configuration
+pipeline:
+  default_mode: hybrid  # correct, synthesize, or hybrid
+  parallel_processing: true
+  max_workers: 4
+  cache_enabled: true
+  cache_size_mb: 500
+
+# Vintage ML configuration
+vintageml:
+  # Perceptron settings
+  perceptron:
+    learning_rate: 0.01
+    max_epochs: 100
+    
+  # PCA settings
+  pca_components: 20
+  
+  # LDA settings
+  lda_components: 3
+  
+  # k-NN settings
+  k_neighbors: 5
+  distance_metric: euclidean
+  
+  # SOM settings
+  som_size: [15, 15]
+  som_learning_rate: 0.5
+  som_iterations: 1000
+  
+  # Detection thresholds
+  confidence_threshold: 0.5
+  patch_size: 32
+  stride: 16
+  
+  # De-dimensionalization settings
+  use_adaptive_reduction: true
+  use_random_projection: true
+  use_quantization: false
+  sparsity_threshold: 0.7
+  
+  # Compression settings
+  model_compression:
+    use_low_rank: true
+    use_pruning: true
+    pruning_sparsity: 0.9
+    use_distillation: false
+    quantization_bits: 8
+
+# Hybrid pipeline configuration
+hybrid:
+  max_iterations: 3
+  convergence_threshold: 0.01
+  use_modern_fallback: true
+  
+  # Physics-ML interaction
+  physics_weight: 0.7
+  ml_weight: 0.3
+  
+  # Refinement settings
+  parameter_learning_rate: 0.1
+  radial_refinement: true
+  chromatic_refinement: true
+
+# Detection configuration
+detection:
+  # Lens detection
+  use_exif: true
+  use_fingerprinting: true
+  fallback_to_generic: true
+  
+  # Defect detection
+  enable_vintage_ml: true
+  enable_statistical: true
+  combine_methods: true
+  
+  # Thresholds
+  dust_threshold: 0.5
+  scratch_threshold: 0.6
+  fungus_threshold: 0.7
+
+# Physics engine configuration
+physics:
+  # Distortion models
+  distortion_model: brown_conrady  # brown_conrady, division, rational
+  
+  # Correction strengths (0-1)
+  distortion_strength: 0.8
+  chromatic_strength: 0.7
+  vignetting_strength: 0.6
+  
+  # PSF deconvolution
+  deconvolve: true
+  deconv_iterations: 10
+  deconv_regularization: 0.01
+
+# Depth processing configuration
+depth:
+  enabled: true
+  model: midas  # midas, dpt, or custom
+  
+  # Layer processing
+  num_layers: 5
+  layer_overlap: 0.1
+  
+  # Depth-aware corrections
+  scale_by_depth: true
+  preserve_bokeh: true
+
+# Statistical cleanup configuration
+statistical:
+  # Preservation modes
+  mode: adaptive  # adaptive, full, artistic, minimal
+  
+  # Defect removal
+  remove_dust: true
+  remove_scratches: true
+  remove_fungus: false  # Often part of character
+  
+  # Inpainting
+  inpaint_method: vintage_knn  # vintage_knn, vintage_som, classical, neural
+  
+  # Character preservation
+  preserve_swirl: 0.9
+  preserve_flare: 0.8
+  preserve_vignetting: 0.5
+
+# Synthesis configuration
+synthesis:
+  # Bokeh synthesis
+  bokeh_quality: high
+  aperture_blades: 8
+  
+  # Character transfer
+  transfer_strength: 0.7
+  blend_mode: adaptive
+  
+  # Artistic presets
+  enable_presets: true
+  custom_presets_path: config/presets/
+
+# Output configuration
+output:
+  # Format settings
+  jpeg_quality: 95
+  tiff_compression: none
+  preserve_metadata: true
+  embed_correction_data: true
+  
+  # Color management
+  output_colorspace: srgb
+  preserve_input_profile: false
+
+# Performance configuration
+performance:
+  # GPU settings
+  use_gpu: true
+  gpu_device: 0
+  
+  # Memory management
+  max_memory_gb: 8
+  tile_size: 512
+  
+  # Optimization
+  enable_caching: true
+  optimize_for: quality  # quality, speed, or balanced
+
+# Logging configuration
+logging:
+  level: INFO
+  file: logs/vintageoptics.log
+  rotate_size_mb: 10
+  keep_backups: 5
+
+# Database configuration
+database:
+  # Lens database
+  lens_db_path: data/lens_database.db
+  
+  # Calibration storage
+  calibration_path: data/calibrations/
+  
+  # Instance fingerprints
+  fingerprint_path: data/fingerprints/
+
+# Plugin configuration
+plugins:
+  enabled: true
+  plugin_dir: plugins/
+  auto_load: true
+  
+  # Enabled plugins
+  enabled_plugins:
+    - vintage_film_emulation
+    - advanced_bokeh_synthesis
+    - artistic_lens_presets

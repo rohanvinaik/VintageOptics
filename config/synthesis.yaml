@@ -1,0 +1,53 @@
+# config/synthesis.yaml
+synthesis:
+  # Lens characteristic application
+  apply_distortion: true
+  apply_vignetting: true
+  apply_chromatic_aberration: true
+  apply_bokeh: true
+  apply_coating_effects: true
+  apply_rendering_character: true
+  
+  # Bokeh synthesis
+  bokeh_quality: high  # low, medium, high, ultra
+  preserve_highlights: true
+  bokeh_shape_accuracy: 0.9
+  
+  # FOV transformation
+  fov_expansion_method: adaptive  # padding, outpainting, neural
+  max_fov_expansion: 2.0  # Maximum expansion factor
+  
+  # Depth estimation
+  depth_model: DPT_Large  # MiDaS model selection
+  refine_with_focus: true
+  
+  # Artistic presets
+  enable_presets: true
+  preset_categories:
+    - vintage_portrait
+    - dreamy_landscape  
+    - cinematic_look
+    - lomography_style
+
+# Lens-specific synthesis profiles
+lens_profiles:
+  helios_44_2:
+    swirly_bokeh_strength: 0.8
+    contrast_character: vintage_mid
+    color_cast: warm
+    coating_simulation: single_coating_aged
+    
+  canon_fd_50_1.4:
+    bokeh_character: smooth_modern
+    coating_simulation: ssc_multicoating
+    rendering: clinical_sharp
+    
+  meyer_optik_trioplan:
+    soap_bubble_bokeh: true
+    bubble_intensity: 0.9
+    edge_sharpness: high
+    
+  petzval_85:
+    swirl_strength: 1.0
+    vignetting_artistic: true
+    field_curvature: strong

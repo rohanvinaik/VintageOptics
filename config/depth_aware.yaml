@@ -1,0 +1,60 @@
+# config/depth_aware.yaml
+depth_analysis:
+  enabled: true
+  methods:
+    - frequency_analysis
+    - edge_analysis
+    - multiscale_blur
+    - ml_estimation  # Optional, requires model
+  
+  # Depth map parameters
+  patch_size: 32
+  patch_stride: 16
+  blur_kernel_sizes: [3, 5, 7, 9, 11, 15, 21, 31]
+  
+  # Layer segmentation
+  auto_detect_layers: true
+  min_layers: 3
+  max_layers: 7
+  layer_smoothing: true
+
+bokeh_preservation:
+  enabled: true
+  preserve_swirl: true
+  preserve_soap_bubble: true
+  preserve_cat_eye: true
+  
+  # Bokeh enhancement
+  enhance_weak_bokeh: false
+  smooth_harsh_bokeh: true
+  
+depth_aware_corrections:
+  # In-focus areas (focus_score > 0.8)
+  sharp_area:
+    distortion_correction: 1.0
+    chromatic_aberration: 1.0
+    vignetting: 0.8
+    sharpening: 0.3
+    defect_removal: 1.0
+  
+  # Transition areas (0.3 < focus_score < 0.8)
+  transition_area:
+    distortion_correction: 0.6
+    chromatic_aberration: 0.7
+    vignetting: 0.7
+    sharpening: 0.1
+    defect_removal: 0.8
+  
+  # Bokeh areas (focus_score < 0.3)
+  bokeh_area:
+    distortion_correction: 0.2
+    chromatic_aberration: 0.3
+    vignetting: 0.5
+    sharpening: 0.0
+    defect_removal: 0.5
+
+depth_enhancement:
+  enabled: false
+  contrast_boost_sharp: 0.1
+  bokeh_quality_enhancement: true
+  depth_map_export: true

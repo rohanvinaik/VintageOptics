@@ -1,0 +1,21 @@
+# docker/docker-compose.yml
+version: '3.8'
+
+services:
+  vintageoptics:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+    environment:
+      - VINTAGEOPTICS_ENV=production
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          devices:
+            - capabilities: [gpu]
