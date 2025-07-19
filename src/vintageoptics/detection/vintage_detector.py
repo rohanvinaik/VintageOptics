@@ -3,11 +3,11 @@
 from .base_detector import BaseLensDetector
 from typing import Dict, Optional
 
-class VintageLensDetector(BaseLensDetector):
+class VintageDetector(BaseLensDetector):
     """Detector for vintage manual lenses using optical fingerprinting"""
     
-    def detect(self, image_data) -> Optional[Dict]:
-        """Detect vintage lens from optical characteristics"""
+    def detect(self, image_data) -> float:
+        """Detect vintage lens from optical characteristics and return probability score"""
         
         # Import here to avoid circular dependency
         from .lens_fingerprinting import LensFingerprinter
@@ -39,14 +39,10 @@ class VintageLensDetector(BaseLensDetector):
                 lens_info.update(matched_lens)
                 
         if lens_info:
-            return {
-                'lens_type': 'vintage',
-                'lens_id': self._generate_vintage_id(lens_info),
-                'confidence': 0.7 if 'model' in lens_info else 0.4,
-                **lens_info
-            }
+            # Return confidence score for vintage detection
+            return lens_info.get('confidence', 0.7)
             
-        return None
+        return 0.0
     
     def _match_vintage_lens(self, signature: Dict) -> Optional[Dict]:
         """Match optical signature against vintage lens database"""

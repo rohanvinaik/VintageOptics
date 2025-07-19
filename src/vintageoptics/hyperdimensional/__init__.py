@@ -7,7 +7,7 @@ and sensor errors, enabling orthogonal error separation and robust feature encod
 
 from .hd_encoder import HyperdimensionalEncoder
 from .error_separator import OrthogonalErrorSeparator
-from .defect_topology import TopologicalDefectAnalyzer
+from .defect_topology import TopologicalDefectAnalyzer, TopologicalFeature
 from .constraint_solver import ConstraintBasedCorrector
 from .integration import (
     HyperdimensionalLensAnalyzer,
@@ -20,6 +20,7 @@ __all__ = [
     'HyperdimensionalEncoder',
     'OrthogonalErrorSeparator', 
     'TopologicalDefectAnalyzer',
+    'TopologicalFeature',
     'ConstraintBasedCorrector',
     'HyperdimensionalLensAnalyzer',
     'quick_hd_correction',

@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class DetectionResult:
+class LensDetectionResult:
     """Unified detection result."""
     lens_type: LensType
     confidence: float
@@ -50,7 +50,7 @@ class DetectionResult:
             self.feature_scores = {}
 
 
-class UnifiedDetector:
+class UnifiedLensDetector:
     """
     Unified lens detection system combining multiple detection methods
     with hyperdimensional analysis for robust lens identification.
@@ -81,7 +81,7 @@ class UnifiedDetector:
         # Known lens database
         self.lens_database = self._load_lens_database()
         
-    def detect(self, image: Union[str, Path, np.ndarray]) -> DetectionResult:
+    def detect(self, image: Union[str, Path, np.ndarray]) -> LensDetectionResult:
         """
         Perform unified lens detection.
         
@@ -100,7 +100,7 @@ class UnifiedDetector:
         logger.info("Performing unified lens detection...")
         
         # Initialize result
-        result = DetectionResult(
+        result = LensDetectionResult(
             lens_type=LensType.UNKNOWN,
             confidence=0.0,
             vintage_probability=0.0,
@@ -132,9 +132,16 @@ class UnifiedDetector:
         
         return result
     
-    def _run_vintage_detection(self, image: np.ndarray, result: DetectionResult):
+    def _run_vintage_detection(self, image: np.ndarray, result: LensDetectionResult):
         """Run vintage lens detection."""
-        vintage_score = self.vintage_detector.detect(image)
+        # Create simple image data object
+        class ImageData:
+            def __init__(self, img):
+                self.image = img
+                self.metadata = {}
+        
+        image_data = ImageData(image)
+        vintage_score = self.vintage_detector.detect(image_data)
         result.vintage_probability = vintage_score
         
         # Get detailed vintage features
@@ -282,7 +289,7 @@ class UnifiedDetector:
         
         return float(max(0, contrast_fade))
     
-    def _detect_vintage_specifics(self, image: np.ndarray, result: DetectionResult):
+    def _detect_vintage_specifics(self, image: np.ndarray, result: LensDetectionResult):
         """Detect specific vintage lens characteristics."""
         # Era detection based on coating and design
         coating_flare = result.feature_scores.get('vintage_coating_flare', 0)
@@ -307,9 +314,16 @@ class UnifiedDetector:
         else:
             result.optical_design = "Standard design"
     
-    def _run_electronic_detection(self, image: np.ndarray, result: DetectionResult):
+    def _run_electronic_detection(self, image: np.ndarray, result: LensDetectionResult):
         """Run electronic lens detection."""
-        electronic_score = self.electronic_detector.detect(image)
+        # Create simple image data object
+        class ImageData:
+            def __init__(self, img):
+                self.image = img
+                self.metadata = {}
+        
+        image_data = ImageData(image)
+        electronic_score = self.electronic_detector.detect(image_data)
         result.electronic_probability = electronic_score
         
         # Get detailed electronic features
@@ -442,7 +456,7 @@ class UnifiedDetector:
         
         return float(min(1.0, artifacts))
     
-    def _run_hd_analysis(self, image: np.ndarray, result: DetectionResult):
+    def _run_hd_analysis(self, image: np.ndarray, result: LensDetectionResult):
         """Run hyperdimensional analysis."""
         logger.info("Running HD analysis...")
         
@@ -460,7 +474,7 @@ class UnifiedDetector:
         # Add HD-based scores
         result.feature_scores['hd_defect_score'] = 1.0 / (1.0 + topo_result['total_features'] * 0.1)
         
-    def _run_fingerprinting(self, image: np.ndarray, result: DetectionResult):
+    def _run_fingerprinting(self, image: np.ndarray, result: LensDetectionResult):
         """Run lens fingerprinting."""
         fingerprint = self.fingerprinter.generate_fingerprint(image)
         
@@ -472,7 +486,7 @@ class UnifiedDetector:
                 if isinstance(v, (int, float))
             })
     
-    def _determine_lens_type(self, result: DetectionResult):
+    def _determine_lens_type(self, result: LensDetectionResult):
         """Determine final lens type from all detections."""
         # Simple threshold-based decision
         if result.vintage_probability > 0.7:
@@ -484,7 +498,7 @@ class UnifiedDetector:
         else:
             result.lens_type = LensType.MODERN_ELECTRONIC
     
-    def _match_known_lens(self, result: DetectionResult):
+    def _match_known_lens(self, result: LensDetectionResult):
         """Match against known lens database."""
         if not self.lens_database or result.hypervector is None:
             return
@@ -509,7 +523,7 @@ class UnifiedDetector:
             result.model = lens_info.get('model')
             logger.info(f"Matched lens: {result.manufacturer} {result.model}")
     
-    def _calculate_confidence(self, result: DetectionResult) -> float:
+    def _calculate_confidence(self, result: LensDetectionResult) -> float:
         """Calculate overall detection confidence."""
         # Base confidence on primary detection
         if result.lens_type == LensType.VINTAGE_MANUAL:
@@ -531,7 +545,7 @@ class UnifiedDetector:
         
         return float(confidence)
     
-    def _calculate_feature_consistency(self, result: DetectionResult) -> float:
+    def _calculate_feature_consistency(self, result: LensDetectionResult) -> float:
         """Calculate how consistent the detected features are."""
         if not result.feature_scores:
             return 0.5
@@ -604,7 +618,7 @@ class UnifiedDetector:
 
 
 # Convenience function
-def detect_lens(image_path: str) -> DetectionResult:
+def detect_lens(image_path: str) -> LensDetectionResult:
     """
     Quick lens detection.
     
@@ -614,5 +628,5 @@ def detect_lens(image_path: str) -> DetectionResult:
     Returns:
         Detection result
     """
-    detector = UnifiedDetector(use_hd=True)
+    detector = UnifiedLensDetector(use_hd=True)
     return detector.detect(image_path)

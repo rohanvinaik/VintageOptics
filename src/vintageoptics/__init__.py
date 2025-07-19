@@ -42,11 +42,10 @@ from .analysis import (
 
 # Detection
 from .detection import (
-    UnifiedDetector,
-    DetectionResult,
+    UnifiedLensDetector,
+    LensDetectionResult,
     VintageDetector,
-    ElectronicDetector,
-    detect_lens
+    ElectronicDetector
 )
 
 # Synthesis
@@ -133,11 +132,10 @@ __all__ = [
     'detailed_quality_report',
     
     # Detection
-    'UnifiedDetector',
-    'DetectionResult',
+    'UnifiedLensDetector',
+    'LensDetectionResult',
     'VintageDetector',
     'ElectronicDetector',
-    'detect_lens',
     
     # Synthesis
     'LensSynthesizer',

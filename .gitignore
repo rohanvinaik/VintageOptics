@@ -68,3 +68,16 @@ docs/_build/
 *.bak
 *.swp
 *~.nib
+
+# Backup directories
+backup_*/
+
+# Test output
+*.png
+
+# Temporary scripts
+check_tail_chasing.py
+comprehensive_tail_fix.py
+simple_tail_fix.py
+tail_chasing_fix_report.txt
+quick_commit.sh

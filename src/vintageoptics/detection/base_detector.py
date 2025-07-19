@@ -6,10 +6,10 @@ from typing import Dict, Optional
 class BaseLensDetector(ABC):
     """Abstract base class for lens detectors"""
     
-    def __init__(self, config: Dict):
-        self.config = config
+    def __init__(self, config: Optional[Dict] = None):
+        self.config = config or {}
     
     @abstractmethod
-    def detect(self, image_data) -> Optional[Dict]:
-        """Detect lens from image data"""
+    def detect(self, image_data) -> float:
+        """Detect lens from image data and return probability score"""
         pass

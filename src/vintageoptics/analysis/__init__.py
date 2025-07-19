@@ -6,7 +6,6 @@ Image quality analysis and metrics
 
 from .quality_metrics import QualityAnalyzer, QualityMetrics
 from .lens_characterizer import LensCharacterizer, LensCharacteristics
-from .comparison import ComparisonAnalyzer
 from .reports import ReportGenerator
 from .error_orthogonality import HybridErrorCorrector, OrthogonalErrorAnalyzer, ErrorProfile
 
@@ -26,17 +25,22 @@ def detailed_quality_report(original, processed, output_path=None):
     generator = ReportGenerator()
     return generator.create_report(original, processed, output_path)
 
+def compare_images(image1, image2):
+    """Compare quality between two images."""
+    analyzer = QualityAnalyzer()
+    return analyzer.compare_quality(image1, image2)
+
 __all__ = [
     'QualityAnalyzer',
     'QualityMetrics',
     'LensCharacterizer',
     'LensCharacteristics',
-    'ComparisonAnalyzer',
     'ReportGenerator',
     'HybridErrorCorrector',
     'OrthogonalErrorAnalyzer',
     'ErrorProfile',
     'quick_lens_analysis',
     'quick_quality_check',
-    'detailed_quality_report'
+    'detailed_quality_report',
+    'compare_images'
 ]

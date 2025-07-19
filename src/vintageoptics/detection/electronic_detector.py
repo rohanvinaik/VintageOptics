@@ -3,11 +3,11 @@
 from .base_detector import BaseLensDetector
 from typing import Dict, Optional
 
-class ElectronicLensDetector(BaseLensDetector):
+class ElectronicDetector(BaseLensDetector):
     """Detector for modern electronic lenses with communication protocols"""
     
-    def detect(self, image_data) -> Optional[Dict]:
-        """Detect electronic lens from EXIF and communication data"""
+    def detect(self, image_data) -> float:
+        """Detect electronic lens from EXIF and communication data, return probability score"""
         
         metadata = image_data.metadata if hasattr(image_data, 'metadata') else {}
         
@@ -35,14 +35,10 @@ class ElectronicLensDetector(BaseLensDetector):
             lens_info['stabilization'] = metadata['LensStabilization']
             
         if lens_info:
-            return {
-                'lens_type': 'electronic',
-                'lens_id': self._generate_lens_id(lens_info),
-                'confidence': 0.9 if 'model' in lens_info else 0.5,
-                **lens_info
-            }
+            # Return confidence score for electronic detection
+            return 0.9 if 'model' in lens_info else 0.5
         
-        return None
+        return 0.0
     
     def _generate_lens_id(self, lens_info: Dict) -> str:
         """Generate unique lens identifier"""

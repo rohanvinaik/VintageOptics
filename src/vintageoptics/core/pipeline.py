@@ -19,7 +19,7 @@ from ..hyperdimensional import (
     separate_vintage_digital_errors
 )
 from ..analysis import LensCharacterizer, QualityAnalyzer
-from ..detection import UnifiedDetector
+from ..detection import UnifiedLensDetector
 from ..physics.optics_engine import OpticsEngine
 from ..synthesis import LensSynthesizer
 from ..depth import DepthAnalyzer, BokehAnalyzer
@@ -125,7 +125,7 @@ class VintageOpticsPipeline:
         # Traditional components
         self.lens_characterizer = LensCharacterizer(use_hd=self.config.use_hd)
         self.quality_analyzer = QualityAnalyzer(use_hd=self.config.use_hd)
-        self.unified_detector = UnifiedDetector()
+        self.unified_detector = UnifiedLensDetector()
         
         # Physics and synthesis
         self.optics_engine = OpticsEngine(use_gpu=self.config.use_gpu)

@@ -359,8 +359,8 @@ async def detect_lens(
             raise HTTPException(status_code=400, detail="Could not decode image")
         
         # Detect lens
-        from ..detection import UnifiedDetector
-        detector = UnifiedDetector()
+        from ..detection import UnifiedLensDetector
+        detector = UnifiedLensDetector()
         detection = detector.detect(img)
         
         # Get characteristics if requested

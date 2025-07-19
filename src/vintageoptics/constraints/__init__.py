@@ -8,7 +8,7 @@ allowing physical constraints to guide lens correction and synthesis operations.
 from .constraint_spec import ConstraintSpecification, PhysicalConstraint
 from .error_analyzer import OrthogonalErrorAnalyzer
 from .task_graph import OpticalTaskGraph, TaskNode
-from .uncertainty import UncertaintyTracker
+from .uncertainty import UncertaintyTracker, UncertaintyEstimate
 
 __all__ = [
     'ConstraintSpecification',
@@ -16,5 +16,6 @@ __all__ = [
     'OrthogonalErrorAnalyzer',
     'OpticalTaskGraph',
     'TaskNode',
-    'UncertaintyTracker'
+    'UncertaintyTracker',
+    'UncertaintyEstimate'
 ]
