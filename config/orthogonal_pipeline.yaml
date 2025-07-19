@@ -1,0 +1,52 @@
+# Orthogonal Error Correction Pipeline Configuration
+# This implements the constraint-oriented architecture for VintageOptics
+
+stages:
+  - name: lens_characterization
+    module: vintageoptics.core.lens_characterizer
+    params:
+      auto_detect: true
+      confidence_threshold: 0.8
+    enabled: true
+    
+  - name: vintage_simulation
+    module: vintageoptics.physics.optics_engine
+    params:
+      quality: high
+      preserve_defects: true
+    enabled: false  # Skip if processing real vintage images
+    
+  - name: orthogonal_correction
+    module: vintageoptics.analysis.error_orthogonality
+    params:
+      confidence_threshold: 0.7
+      ica_components: 4
+      use_gpu: false
+    enabled: true
+    depends_on:
+      - lens_characterization
+      
+  - name: enhancement
+    module: vintageoptics.synthesis.neural
+    params:
+      preserve_character: true
+      strength: 0.5
+    enabled: false  # Optional post-processing
+    depends_on:
+      - orthogonal_correction
+
+global_params:
+  color_space: sRGB
+  bit_depth: 16
+  preserve_metadata: true
+  
+output_format: png
+parallel_processing: true
+max_workers: 4
+
+# Constraints that must be satisfied
+constraints:
+  - name: quality_preservation
+    threshold: 0.85
+  - name: character_retention
+    threshold: 0.90

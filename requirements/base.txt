@@ -7,6 +7,10 @@ numba>=0.53.0,<0.61.0
 PyYAML>=6.0
 scikit-image>=0.19.0
 
+# For orthogonal error correction
+scikit-learn>=1.0.0  # For ICA
+dataclasses>=0.8  # For Python 3.6 compatibility
+
 # Optional metadata extraction libraries
 exifread>=3.0.0
 Pillow>=9.0.0

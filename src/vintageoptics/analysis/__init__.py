@@ -8,6 +8,7 @@ from .quality_metrics import QualityAnalyzer, QualityMetrics
 from .lens_characterizer import LensCharacterizer, LensCharacteristics
 from .comparison import ComparisonAnalyzer
 from .reports import ReportGenerator
+from .error_orthogonality import HybridErrorCorrector, OrthogonalErrorAnalyzer, ErrorProfile
 
 # Quick access functions
 def quick_lens_analysis(image_path):
@@ -32,6 +33,9 @@ __all__ = [
     'LensCharacteristics',
     'ComparisonAnalyzer',
     'ReportGenerator',
+    'HybridErrorCorrector',
+    'OrthogonalErrorAnalyzer',
+    'ErrorProfile',
     'quick_lens_analysis',
     'quick_quality_check',
     'detailed_quality_report'
